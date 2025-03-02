@@ -1,62 +1,59 @@
 #include <iostream>
-#include <vector>
-#include <conio.h> // For input without pressing Enter (Windows)
-#include <thread>  // For sleep
-#include <chrono>  // For sleep duration
+#include <conio.h>
+#include <windows.h>
 
 using namespace std;
 
+bool gameOver;
 const int width = 20;
 const int height = 20;
+int x, y, fruitX, fruitY, score;
+int tailX[100], tailY[100];
+int nTail;
+enum eDirection { STOP = 0, LEFT, RIGHT, UP, DOWN };
+eDirection dir;
 
-struct Point {
-    int x, y;
-};
-
-vector<Point> snake;
-Point fruit;
-int score = 0;
-enum Direction { STOP = 0, LEFT, RIGHT, UP, DOWN };
-Direction dir;
-bool gameOver = false;
-
-void Setup() {
+void Setup()
+{
     gameOver = false;
     dir = STOP;
-    snake.clear();
-    snake.push_back({width / 2, height / 2}); // Starting position
-    fruit.x = rand() % width;
-    fruit.y = rand() % height;
+    x = width / 2;
+    y = height / 2;
+    fruitX = rand() % width;
+    fruitY = rand() % height;
     score = 0;
 }
 
-void Draw() {
-    system("cls"); // Clear the console (Windows)
-    // system("clear"); // Clear the console (Linux/macOS) - use if conio.h doesn't work
-
+void Draw()
+{
+    system("cls");
     for (int i = 0; i < width + 2; i++)
         cout << "#";
     cout << endl;
 
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
+    for (int i = 0; i < height; i++)
+    {
+        for (int j = 0; j < width; j++)
+        {
             if (j == 0)
                 cout << "#";
-
-            bool printSnake = false;
-            for (int k = 0; k < snake.size(); k++) {
-                if (snake[k].x == j && snake[k].y == i) {
-                    cout << "O"; // Snake body
-                    printSnake = true;
-                    break;
+            if (i == y && j == x)
+                cout << "O";
+            else if (i == fruitY && j == fruitX)
+                cout << "F";
+            else
+            {
+                bool printTail = false;
+                for (int k = 0; k < nTail; k++)
+                {
+                    if (tailX[k] == j && tailY[k] == i)
+                    {
+                        cout << "o";
+                        printTail = true;
+                    }
                 }
-            }
-
-            if (!printSnake) {
-                if (i == fruit.y && j == fruit.x)
-                    cout << "F"; // Fruit
-                else
-                    cout << " "; // Empty space
+                if (!printTail)
+                    cout << " ";
             }
 
             if (j == width - 1)
@@ -68,12 +65,15 @@ void Draw() {
     for (int i = 0; i < width + 2; i++)
         cout << "#";
     cout << endl;
-    cout << "Score: " << score << endl;
+    cout << "Score:" << score << endl;
 }
 
-void Input() {
-    if (_kbhit()) {
-        switch (_getch()) {
+void Input()
+{
+    if (_kbhit())
+    {
+        switch (_getch())
+        {
         case 'a':
             dir = LEFT;
             break;
@@ -93,59 +93,75 @@ void Input() {
     }
 }
 
-void Logic() {
-    // 1. Update snake position
-    vector<Point> prevSnake = snake;
-    Point head = snake[0];
+void Logic()
+{
+    int prevX = tailX[0];
+    int prevY = tailY[0];
+    int prev2X, prev2Y;
+    tailX[0] = x;
+    tailY[0] = y;
+    for (int i = 1; i < nTail; i++)
+    {
+        prev2X = tailX[i];
+        prev2Y = tailY[i];
+        tailX[i] = prevX;
+        tailY[i] = prevY;
+        prevX = prev2X;
+        prevY = prev2Y;
+    }
 
-    switch (dir) {
+    switch (dir)
+    {
     case LEFT:
-        head.x--;
+        x--;
         break;
     case RIGHT:
-        head.x++;
+        x++;
         break;
     case UP:
-        head.y--;
+        y--;
         break;
     case DOWN:
-        head.y++;
+        y++;
+        break;
+    default:
         break;
     }
 
-    snake.insert(snake.begin(), head);
-    snake.pop_back();
+    if (x >= width)
+        x = 0;
+    else if (x < 0)
+        x = width - 1;
 
-    // 2. Check for collisions
-    if (head.x >= width || head.x < 0 || head.y >= height || head.y < 0) {
-        gameOver = true; // Hit the wall
+    if (y >= height)
+        y = 0;
+    else if (y < 0)
+        y = height - 1;
+
+    for (int i = 0; i < nTail; i++)
+    {
+        if (tailX[i] == x && tailY[i] == y)
+            gameOver = true;
     }
 
-    for (int i = 1; i < snake.size(); i++) {
-        if (snake[i].x == head.x && snake[i].y == head.y) {
-            gameOver = true; // Hit itself
-        }
-    }
-
-    // 3. Check if ate fruit
-    if (head.x == fruit.x && head.y == fruit.y) {
+    if (x == fruitX && y == fruitY)
+    {
         score += 10;
-        fruit.x = rand() % width;
-        fruit.y = rand() % height;
-
-        // Grow the snake
-        snake.insert(snake.begin(), head); // Add a new head
+        fruitX = rand() % width;
+        fruitY = rand() % height;
+        nTail++;
     }
 }
 
-int main() {
+int main()
+{
     Setup();
-    while (!gameOver) {
+    while (!gameOver)
+    {
         Draw();
         Input();
         Logic();
-        this_thread::sleep_for(chrono::milliseconds(50)); // Adjust speed
+        Sleep(10);
     }
-    cout << "Game Over! Score: " << score << endl;
     return 0;
 }
